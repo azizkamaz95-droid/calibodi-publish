@@ -1,0 +1,75 @@
+name: Publier vidéo sur toutes les plateformes
+
+on:
+  push:
+    paths:
+      - 'videos/*.mp4'
+      - 'videos/*.json'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer les dépendances
+        run: |
+          pip install autotok instagrapi google-api-python-client google-auth-oauthlib
+
+      - name: Lire les métadonnées
+        id: meta
+        run: |
+          # Cherche le fichier JSON de métadonnées dans videos/
+          META=$(ls videos/*.json 2>/dev/null | head -1)
+          if [ -z "$META" ]; then
+            echo "❌ Aucun fichier metadata.json trouvé dans videos/"
+            exit 1
+          fi
+          echo "title=$(jq -r '.title' $META)" >> $GITHUB_OUTPUT
+          echo "description=$(jq -r '.description' $META)" >> $GITHUB_OUTPUT
+          echo "video=$(ls videos/*.mp4 | head -1)" >> $GITHUB_OUTPUT
+
+      - name: Publier sur TikTok
+        env:
+          TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
+        run: |
+          python scripts/upload_tiktok.py \
+            --video "${{ steps.meta.outputs.video }}" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --description "${{ steps.meta.outputs.description }}"
+        continue-on-error: true
+
+      - name: Publier sur YouTube
+        env:
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
+        run: |
+          python scripts/upload_youtube.py \
+            --video "${{ steps.meta.outputs.video }}" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --description "${{ steps.meta.outputs.description }}"
+        continue-on-error: true
+
+      - name: Publier sur Instagram
+        env:
+          INSTAGRAM_SESSION_JSON: ${{ secrets.INSTAGRAM_SESSION_JSON }}
+        run: |
+          python scripts/upload_instagram.py \
+            --video "${{ steps.meta.outputs.video }}" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --description "${{ steps.meta.outputs.description }}"
+        continue-on-error: true
+
+      - name: Nettoyer les vidéos publiées
+        run: |
+          git config user.email "bot@calibodi.com"
+          git config user.name "CaliBodi Bot"
+          git rm videos/*.mp4 videos/*.json 2>/dev/null || true
+          git commit -m "🧹 Vidéo publiée — nettoyage" || true
+          git push || true
