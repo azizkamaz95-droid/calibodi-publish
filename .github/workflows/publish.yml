@@ -1,10 +1,10 @@
-name: Publier vidéo sur toutes les plateformes
+name: Publier vidéo — TikTok + YouTube + Instagram + Facebook
 
 on:
   push:
     paths:
       - 'videos/*.mp4'
-      - 'videos/*.json'
+      - 'videos/metadata.json'
 
 jobs:
   publish:
@@ -21,20 +21,26 @@ jobs:
 
       - name: Installer les dépendances
         run: |
-          pip install autotok instagrapi google-api-python-client google-auth-oauthlib
+          pip install autotok instagrapi google-api-python-client google-auth-oauthlib requests
 
       - name: Lire les métadonnées
         id: meta
         run: |
-          # Cherche le fichier JSON de métadonnées dans videos/
-          META=$(ls videos/*.json 2>/dev/null | head -1)
-          if [ -z "$META" ]; then
-            echo "❌ Aucun fichier metadata.json trouvé dans videos/"
+          META="videos/metadata.json"
+          if [ ! -f "$META" ]; then
+            echo "❌ videos/metadata.json introuvable"
+            exit 1
+          fi
+          VIDEO=$(ls videos/*.mp4 2>/dev/null | head -1)
+          if [ -z "$VIDEO" ]; then
+            echo "❌ Aucun fichier .mp4 dans videos/"
             exit 1
           fi
           echo "title=$(jq -r '.title' $META)" >> $GITHUB_OUTPUT
           echo "description=$(jq -r '.description' $META)" >> $GITHUB_OUTPUT
-          echo "video=$(ls videos/*.mp4 | head -1)" >> $GITHUB_OUTPUT
+          echo "video=$VIDEO" >> $GITHUB_OUTPUT
+          echo "📹 Vidéo : $VIDEO"
+          echo "📝 Titre : $(jq -r '.title' $META)"
 
       - name: Publier sur TikTok
         env:
@@ -46,7 +52,7 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Publier sur YouTube
+      - name: Publier sur YouTube Shorts
         env:
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
         run: |
@@ -56,7 +62,7 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Publier sur Instagram
+      - name: Publier sur Instagram Reels
         env:
           INSTAGRAM_SESSION_JSON: ${{ secrets.INSTAGRAM_SESSION_JSON }}
         run: |
@@ -66,10 +72,21 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Nettoyer les vidéos publiées
+      - name: Publier sur Facebook Reels
+        env:
+          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
+          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+        run: |
+          python scripts/upload_facebook.py \
+            --video "${{ steps.meta.outputs.video }}" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --description "${{ steps.meta.outputs.description }}"
+        continue-on-error: true
+
+      - name: Nettoyer après publication
         run: |
           git config user.email "bot@calibodi.com"
           git config user.name "CaliBodi Bot"
-          git rm videos/*.mp4 videos/*.json 2>/dev/null || true
-          git commit -m "🧹 Vidéo publiée — nettoyage" || true
+          git rm videos/*.mp4 videos/metadata.json 2>/dev/null || true
+          git commit -m "🧹 Vidéo publiée — nettoyage automatique" || true
           git push || true
