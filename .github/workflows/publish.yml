@@ -5,6 +5,7 @@ on:
     paths:
       - 'videos/*.mp4'
       - 'videos/metadata.json'
+  workflow_dispatch:
 
 jobs:
   publish:
