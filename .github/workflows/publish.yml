@@ -28,19 +28,27 @@ jobs:
         run: |
           META="videos/metadata.json"
           if [ ! -f "$META" ]; then
-            echo "❌ videos/metadata.json introuvable"
+            echo "videos/metadata.json introuvable"
             exit 1
           fi
           VIDEO=$(ls videos/*.mp4 2>/dev/null | head -1)
           if [ -z "$VIDEO" ]; then
-            echo "❌ Aucun fichier .mp4 dans videos/"
+            echo "Aucun fichier .mp4 dans videos/"
             exit 1
           fi
-          echo "title=$(jq -r '.title' $META)" >> $GITHUB_OUTPUT
-          echo "description=$(jq -r '.description' $META)" >> $GITHUB_OUTPUT
-          echo "video=$VIDEO" >> $GITHUB_OUTPUT
-          echo "📹 Vidéo : $VIDEO"
-          echo "📝 Titre : $(jq -r '.title' $META)"
+          {
+            echo "title<<EOF"
+            jq -r '.title' $META
+            echo "EOF"
+            echo "description<<EOF"
+            jq -r '.description' $META
+            echo "EOF"
+            echo "video<<EOF"
+            echo "$VIDEO"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+          echo "Video: $VIDEO"
+          echo "Titre: $(jq -r '.title' $META)"
 
       - name: Publier sur TikTok
         env:
