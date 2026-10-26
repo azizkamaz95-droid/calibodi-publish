@@ -11,9 +11,13 @@ if __name__ == "__main__":
     api_key = os.environ.get("BUFFER_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    # Introspect Query root pour voir les champs disponibles
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": '{ __type(name: "Query") { fields { name type { name kind } } } }'})
+    # Introspect Account type pour trouver le champ org
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": '{ __type(name: "Account") { fields { name type { name kind } } } }'})
+    print("Account fields:")
     fields = r.json().get("data", {}).get("__type", {}).get("fields", [])
-    print("Query fields disponibles:")
     for f in fields:
         print(f"  {f['name']}: {f['type']['name'] or f['type']['kind']}")
+
+    # Query account
+    r2 = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": "{ account { id email organizations { id name } } }"})
+    print("\nAccount:", json.dumps(r2.json(), indent=2))
