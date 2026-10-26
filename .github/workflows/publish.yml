@@ -28,7 +28,7 @@ jobs:
         run: |
           pip install google-api-python-client google-auth-oauthlib requests
           # ffmpeg est souvent deja present ; sinon on l'installe avec une limite de temps (apt-get se bloquait parfois)
-          command -v ffmpeg >/dev/null 2>&1 || timeout 180 sudo apt-get install -y -o Acquire::Retries=3 ffmpeg
+          command -v ffmpeg >/dev/null 2>&1 || timeout 240 sudo apt-get install -y --no-install-recommends -o Acquire::http::Timeout=15 -o Acquire::Retries=5 ffmpeg
           command -v jq >/dev/null 2>&1 || timeout 120 sudo apt-get install -y jq
           ffmpeg -version | head -1
 
