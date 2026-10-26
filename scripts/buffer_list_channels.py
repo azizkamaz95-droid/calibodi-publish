@@ -12,16 +12,13 @@ if __name__ == "__main__":
     api_key = os.environ.get("BUFFER_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    # Query channels
     query = """
     query {
       channels(input: { organizationId: "%s" }) {
         id
         name
         service
-        serviceType
-        serviceUsername
-        isConnected
+        serviceId
       }
     }
     """ % ORG_ID
