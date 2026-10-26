@@ -1,10 +1,7 @@
-"""
-Upload video vers TikTok via tiktok-uploader (session cookie).
-"""
+"""\nUpload video vers TikTok via tiktok-uploader (session cookie).\n"""
 import argparse
 import os
 import sys
-import json
 import tempfile
 
 def upload(video_path: str, title: str, description: str):
@@ -19,22 +16,26 @@ def upload(video_path: str, title: str, description: str):
         print("TIKTOK_SESSION_ID manquant")
         sys.exit(1)
 
-    # Écrire les cookies dans un fichier JSON temporaire
-    cookies = [
-        {"name": "sessionid", "value": session_id, "domain": ".tiktok.com", "path": "/"}
-    ]
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-        json.dump(cookies, f)
+    # Format Netscape cookie file (requis par tiktok-uploader)
+    cookie_content = (
+        "# Netscape HTTP Cookie File\n"
+        ".tiktok.com\tTRUE\t/\tTRUE\t9999999999\tsessionid\t" + session_id + "\n"
+    )
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write(cookie_content)
         cookies_path = f.name
 
     caption = f"{title} {description}"[:2200]
-    result = upload_video(
-        video_path,
-        description=caption,
-        cookies=cookies_path,
-    )
-    os.unlink(cookies_path)
-    print(f"TikTok publie : {result}")
+    try:
+        result = upload_video(
+            video_path,
+            description=caption,
+            cookies=cookies_path,
+            headless=True,
+        )
+        print(f"TikTok publie : {result}")
+    finally:
+        os.unlink(cookies_path)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
