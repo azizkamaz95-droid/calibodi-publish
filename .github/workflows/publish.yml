@@ -156,7 +156,7 @@ jobs:
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
-        run: python scripts/debug_watch.py "${{ steps.meta.outputs.videoname }}" 10
+        run: python scripts/debug_watch.py "${{ steps.meta.outputs.videoname }}" 3
         continue-on-error: true
 
       - name: Nettoyer apres publication
