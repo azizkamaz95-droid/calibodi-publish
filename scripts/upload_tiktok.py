@@ -4,7 +4,6 @@ Upload video vers TikTok via Buffer GraphQL API.
 import argparse
 import os
 import sys
-import json
 import requests
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
@@ -29,12 +28,16 @@ def upload(video_path: str, title: str, description: str):
     mutation = """
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
-        post {
-          id
-          status
+        ... on PostActionSuccess {
+          post {
+            id
+            status
+          }
         }
-        userErrors {
-          message
+        ... on PostActionError {
+          userErrors {
+            message
+          }
         }
       }
     }
@@ -58,10 +61,22 @@ def upload(video_path: str, title: str, description: str):
     )
 
     print(f"HTTP status: {resp.status_code}")
-    print(f"Reponse complete: {resp.text}")
+    print(f"Reponse: {resp.text}")
 
     if resp.status_code != 200:
         sys.exit(1)
+
+    result = resp.json()
+    if "errors" in result:
+        print(f"Erreur GraphQL: {result['errors']}")
+        sys.exit(1)
+
+    data = result.get("data", {}).get("createPost", {})
+    post = data.get("post")
+    if post:
+        print(f"TikTok Buffer publie : id={post.get('id')} status={post.get('status')}")
+    else:
+        print(f"Resultat inattendu: {data}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
