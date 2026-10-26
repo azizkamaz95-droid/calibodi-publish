@@ -22,6 +22,7 @@ jobs:
 
       - name: Installer les dépendances
         run: |
+          sudo apt-get install -y xvfb
           pip install tiktok-uploader instagrapi Pillow google-api-python-client google-auth-oauthlib requests
 
       - name: Lire les métadonnées
@@ -55,7 +56,7 @@ jobs:
         env:
           TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
         run: |
-          python scripts/upload_tiktok.py \
+          xvfb-run --auto-servernum python scripts/upload_tiktok.py \
             --video "${{ steps.meta.outputs.video }}" \
             --title "${{ steps.meta.outputs.title }}" \
             --description "${{ steps.meta.outputs.description }}"
