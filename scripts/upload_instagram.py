@@ -33,7 +33,12 @@ def upload(video_path: str, title: str, description: str):
             "mode": "shareNow",
             "schedulingType": "automatic",
             "needsApproval": False,
-            "instagramPostType": "reel",
+            "metadata": {
+                "instagram": {
+                    "type": "reel",
+                    "shouldShareToFeed": True,
+                }
+            },
             "assets": [{"video": {"url": video_url}}],
         }
     }
