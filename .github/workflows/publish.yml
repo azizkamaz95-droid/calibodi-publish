@@ -1,4 +1,4 @@
-name: Publier vidéo — TikTok + YouTube + Instagram + Facebook
+name: Publier video — TikTok + YouTube + Instagram + Facebook
 
 on:
   push:
@@ -20,12 +20,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Installer les dépendances
+      - name: Installer les dependances
         run: |
           sudo apt-get install -y xvfb
           pip install tiktok-uploader instagrapi Pillow google-api-python-client google-auth-oauthlib requests
 
-      - name: Lire les métadonnées
+      - name: Lire les metadonnees
         id: meta
         run: |
           META="videos/metadata.json"
@@ -62,30 +62,18 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Publier sur YouTube Shorts
-        env:
-          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
-        run: |
-          python scripts/upload_youtube.py \
-            --video "${{ steps.meta.outputs.video }}" \
-            --title "${{ steps.meta.outputs.title }}" \
-            --description "${{ steps.meta.outputs.description }}"
-        continue-on-error: true
+      # YouTube desactive pour ce test
+      # - name: Publier sur YouTube Shorts
 
-      - name: Publier sur Instagram Reels
-        env:
-          INSTAGRAM_SESSION_JSON: ${{ secrets.INSTAGRAM_SESSION_JSON }}
-        run: |
-          python scripts/upload_instagram.py \
-            --video "${{ steps.meta.outputs.video }}" \
-            --title "${{ steps.meta.outputs.title }}" \
-            --description "${{ steps.meta.outputs.description }}"
-        continue-on-error: true
+      # Instagram desactive pour ce test
+      # - name: Publier sur Instagram Reels
 
-      - name: Publier sur Facebook Reels
+      - name: Publier sur Facebook
         env:
           FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
           FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
+          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
         run: |
           python scripts/upload_facebook.py \
             --video "${{ steps.meta.outputs.video }}" \
@@ -93,10 +81,10 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Nettoyer après publication
+      - name: Nettoyer apres publication
         run: |
           git config user.email "bot@calibodi.com"
           git config user.name "CaliBodi Bot"
           git rm videos/*.mp4 videos/metadata.json 2>/dev/null || true
-          git commit -m "🧹 Vidéo publiée — nettoyage automatique" || true
+          git commit -m "nettoyage automatique apres publication" || true
           git push || true
