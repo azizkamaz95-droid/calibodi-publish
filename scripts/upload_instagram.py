@@ -1,11 +1,13 @@
 """
-Upload Reels vers Instagram via instagrapi (session cookie).
-Usage: python upload_instagram.py --video path/to/video.mp4 --title "titre" --description "desc"
+Upload Reels vers Instagram via instagrapi + Cloudflare Workers proxy.
+Le proxy contourne le blocage des IPs Azure de GitHub Actions.
 """
 import argparse
 import os
 import sys
 import json
+
+PROXY_URL = "https://instagram-proxy.azizkamaz951.workers.dev"
 
 def upload(video_path: str, title: str, description: str):
     try:
@@ -22,14 +24,21 @@ def upload(video_path: str, title: str, description: str):
     session_data = json.loads(session_json)
     cl = Client()
 
-    # Connexion via sessionid + csrftoken
+    # Proxy Cloudflare Workers pour contourner le blocage Meta sur IPs Azure
+    cl.set_proxy(PROXY_URL)
+
     cl.set_settings({
         "cookies": {
             "sessionid": session_data.get("sessionid", ""),
             "csrftoken": session_data.get("csrftoken", ""),
         }
     })
-    cl.get_timeline_feed()  # Valide la session
+
+    try:
+        cl.get_timeline_feed()
+    except Exception as e:
+        print(f"Erreur connexion Instagram : {e}")
+        sys.exit(1)
 
     caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #coach"
     media = cl.clip_upload(video_path, caption=caption)
