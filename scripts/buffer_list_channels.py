@@ -1,5 +1,5 @@
 """
-Introspect PostInputMetaData pour trouver les champs Instagram type.
+Introspect InstagramPostMetadataInput pour trouver le champ type.
 """
 import os
 import requests
@@ -13,7 +13,11 @@ if __name__ == "__main__":
     def introspect_type(type_name):
         query = '{  __type(name: "' + type_name + '") { inputFields { name type { name kind ofType { name kind ofType { name kind } } } } } }'
         r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query})
-        fields = r.json().get("data", {}).get("__type", {}).get("inputFields", [])
+        data = r.json()
+        if not data or not data.get("data") or not data["data"].get("__type"):
+            print(f"{type_name}: type inconnu ou null")
+            return []
+        fields = data["data"]["__type"].get("inputFields", [])
         print(f"\n{type_name} fields:")
         for f in fields:
             t = f['type']
@@ -24,19 +28,17 @@ if __name__ == "__main__":
             print(f"  {f['name']}: {type_str}")
         return fields
 
-    # Introspect PostInputMetaData to find Instagram type field
-    meta_fields = introspect_type("PostInputMetaData")
-    for f in meta_fields:
-        name = f['name']
-        if 'instagram' in name.lower() or 'type' in name.lower() or 'reel' in name.lower():
-            print(f">>> FOUND in PostInputMetaData: {name}")
-
-    # Also check InstagramPostMetaData if it exists
-    ig_fields = introspect_type("InstagramPostMetaData")
+    # Introspect InstagramPostMetadataInput
+    ig_fields = introspect_type("InstagramPostMetadataInput")
     for f in ig_fields:
-        print(f">>> InstagramPostMetaData field: {f['name']}")
-
-    # Check InstagramMetaData
-    ig2_fields = introspect_type("InstagramMetaData")
-    for f in ig2_fields:
-        print(f">>> InstagramMetaData field: {f['name']}")
+        print(f">>> field: {f['name']}")
+        # Check enum values for type fields
+        t = f['type']
+        type_name = t.get('name') or (t.get('ofType') or {}).get('name')
+        if type_name:
+            enum_q = '{  __type(name: "' + type_name + '") { enumValues { name } } }'
+            r2 = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": enum_q})
+            d2 = r2.json()
+            enum_vals = (d2.get("data") or {}).get("__type") or {}
+            if enum_vals.get("enumValues"):
+                print(f"    enum values: {[e['name'] for e in enum_vals['enumValues']]}")
