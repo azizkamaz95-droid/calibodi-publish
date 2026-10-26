@@ -16,7 +16,8 @@ def upload(video_path: str, title: str, description: str):
         sys.exit(1)
     video_name = os.path.basename(video_path)
     video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
-    caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #squat"
+    # Instagram accepte max 5 hashtags dans la legende d'un Reel
+    caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #squat"
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
     mutation = """
     mutation CreatePost($input: CreatePostInput!) {
