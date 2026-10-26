@@ -5,17 +5,8 @@ import argparse
 import os
 import sys
 import requests
-import json
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
-
-def introspect_type(api_key, type_name):
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    query = f'{{ __type(name: "{type_name}") {{ kind inputFields {{ name type {{ name kind ofType {{ name kind }} }} }} }} }}'
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query})
-    print(f"=== {type_name} ===")
-    print(json.dumps(r.json(), indent=2))
-    return r.json().get("data", {}).get("__type", {})
 
 def upload(video_path: str, title: str, description: str):
     api_key = os.environ.get("BUFFER_API_KEY")
@@ -34,9 +25,6 @@ def upload(video_path: str, title: str, description: str):
         "Content-Type": "application/json",
     }
 
-    # Introspect VideoAssetInput
-    introspect_type(api_key, "VideoAssetInput")
-
     mutation = """
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
@@ -53,7 +41,6 @@ def upload(video_path: str, title: str, description: str):
     }
     """
 
-    # Essai avec video.url
     variables = {
         "input": {
             "channelId": channel_id,
@@ -72,9 +59,9 @@ def upload(video_path: str, title: str, description: str):
     )
 
     print(f"HTTP status: {resp.status_code}")
-    print(f"Reponse: {resp.text}")
 
     if resp.status_code != 200:
+        print(f"Erreur HTTP: {resp.text}")
         sys.exit(1)
 
     result = resp.json()
@@ -85,9 +72,10 @@ def upload(video_path: str, title: str, description: str):
     data = result.get("data", {}).get("createPost", {})
     post = data.get("post")
     if post:
-        print(f"TikTok Buffer publie : id={post.get('id')} status={post.get('status')}")
+        print(f"TikTok publie via Buffer : id={post.get('id')} status={post.get('status')}")
     else:
-        print(f"Resultat: {data}")
+        print(f"Resultat inattendu: {data}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
