@@ -1,59 +1,50 @@
 """
-Upload video vers TikTok via Buffer API.
-Buffer publie directement sur TikTok sans navigateur ni revue d'app.
+Upload video vers TikTok via Buffer API v1.
+Buffer publie directement sur TikTok via une URL video publique.
 """
 import argparse
 import os
 import sys
 import requests
 
-BUFFER_API_URL = "https://api.bufferapp.com/1"
-
 def upload(video_path: str, title: str, description: str):
     api_key = os.environ.get("BUFFER_API_KEY")
     channel_id = os.environ.get("BUFFER_CHANNEL_ID")
+    video_url = os.environ.get("VIDEO_PUBLIC_URL")
 
     if not api_key or not channel_id:
         print("BUFFER_API_KEY ou BUFFER_CHANNEL_ID manquant")
         sys.exit(1)
 
-    # Buffer v2 API - creer un post avec video URL
+    if not video_url:
+        # Construire l'URL depuis le nom du fichier
+        video_name = os.path.basename(video_path)
+        video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
+
     caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #squat"
 
-    # Upload via Buffer API v2
-    headers = {"Authorization": f"Bearer {api_key}"}
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
 
-    # Lire la video et l'uploader
-    with open(video_path, "rb") as f:
-        upload_resp = requests.post(
-            "https://api.bufferapp.com/1/media/upload.json",
-            headers=headers,
-            files={"file": (os.path.basename(video_path), f, "video/mp4")}
-        )
+    payload = {
+        "profile_ids": [channel_id],
+        "text": caption[:2200],
+        "media": {
+            "video": video_url,
+        },
+        "now": True,
+    }
 
-    if upload_resp.status_code != 200:
-        print(f"Erreur upload media Buffer : {upload_resp.text}")
-        sys.exit(1)
-
-    media_id = upload_resp.json().get("id")
-    if not media_id:
-        print(f"Pas d'ID media dans la reponse Buffer : {upload_resp.text}")
-        sys.exit(1)
-
-    # Creer le post
-    post_resp = requests.post(
-        "https://api.bufferapp.com/1/updates/create.json",
+    resp = requests.post(
+        "https://api.buffer.com/v1/updates/create",
         headers=headers,
-        data={
-            "profile_ids[]": channel_id,
-            "text": caption[:2200],
-            "media[video_id]": media_id,
-            "now": "true",
-        }
+        json=payload,
     )
 
-    result = post_resp.json()
-    if post_resp.status_code == 200:
+    result = resp.json()
+    if resp.status_code == 200 or "updates" in result:
         print(f"TikTok Buffer publie : {result}")
     else:
         print(f"Erreur Buffer : {result}")
