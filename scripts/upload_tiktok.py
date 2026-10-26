@@ -1,26 +1,23 @@
 """
-Upload video vers TikTok via Buffer API v1.
-Buffer publie directement sur TikTok via une URL video publique.
+Upload video vers TikTok via Buffer GraphQL API.
 """
 import argparse
 import os
 import sys
 import requests
 
+BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
+
 def upload(video_path: str, title: str, description: str):
     api_key = os.environ.get("BUFFER_API_KEY")
     channel_id = os.environ.get("BUFFER_CHANNEL_ID")
-    video_url = os.environ.get("VIDEO_PUBLIC_URL")
 
     if not api_key or not channel_id:
         print("BUFFER_API_KEY ou BUFFER_CHANNEL_ID manquant")
         sys.exit(1)
 
-    if not video_url:
-        # Construire l'URL depuis le nom du fichier
-        video_name = os.path.basename(video_path)
-        video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
-
+    video_name = os.path.basename(video_path)
+    video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
     caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #squat"
 
     headers = {
@@ -28,27 +25,49 @@ def upload(video_path: str, title: str, description: str):
         "Content-Type": "application/json",
     }
 
-    payload = {
-        "profile_ids": [channel_id],
-        "text": caption[:2200],
-        "media": {
-            "video": video_url,
-        },
-        "now": True,
+    mutation = """
+    mutation CreatePost($input: CreatePostInput!) {
+      createPost(input: $input) {
+        post {
+          id
+          status
+        }
+        userErrors {
+          message
+        }
+      }
+    }
+    """
+
+    variables = {
+        "input": {
+            "channelId": channel_id,
+            "text": caption[:2200],
+            "media": [
+                {"url": video_url, "type": "video"}
+            ],
+            "timing": {"publishNow": True},
+        }
     }
 
     resp = requests.post(
-        "https://api.buffer.com/v1/updates/create",
+        BUFFER_GRAPHQL,
         headers=headers,
-        json=payload,
+        json={"query": mutation, "variables": variables},
     )
 
-    result = resp.json()
-    if resp.status_code == 200 or "updates" in result:
-        print(f"TikTok Buffer publie : {result}")
-    else:
-        print(f"Erreur Buffer : {result}")
+    if resp.status_code != 200:
+        print(f"Erreur HTTP Buffer : {resp.status_code} {resp.text}")
         sys.exit(1)
+
+    result = resp.json()
+    errors = result.get("data", {}).get("createPost", {}).get("userErrors", [])
+    if errors:
+        print(f"Erreur Buffer : {errors}")
+        sys.exit(1)
+
+    post = result.get("data", {}).get("createPost", {}).get("post", {})
+    print(f"TikTok Buffer publie : id={post.get('id')} status={post.get('status')}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
