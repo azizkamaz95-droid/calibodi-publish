@@ -1,10 +1,11 @@
 """
 Upload video vers TikTok via tiktok-uploader (session cookie).
-Usage: python upload_tiktok.py --video path/to/video.mp4 --title "titre" --description "desc"
 """
 import argparse
 import os
 import sys
+import json
+import tempfile
 
 def upload(video_path: str, title: str, description: str):
     try:
@@ -18,12 +19,21 @@ def upload(video_path: str, title: str, description: str):
         print("TIKTOK_SESSION_ID manquant")
         sys.exit(1)
 
+    # Écrire les cookies dans un fichier JSON temporaire
+    cookies = [
+        {"name": "sessionid", "value": session_id, "domain": ".tiktok.com", "path": "/"}
+    ]
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(cookies, f)
+        cookies_path = f.name
+
     caption = f"{title} {description}"[:2200]
     result = upload_video(
         video_path,
         description=caption,
-        cookies=[{"name": "sessionid", "value": session_id, "domain": ".tiktok.com", "path": "/"}],
+        cookies=cookies_path,
     )
+    os.unlink(cookies_path)
     print(f"TikTok publie : {result}")
 
 if __name__ == "__main__":
