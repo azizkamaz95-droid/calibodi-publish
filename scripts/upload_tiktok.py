@@ -25,6 +25,11 @@ def upload(video_path: str, title: str, description: str):
         "Content-Type": "application/json",
     }
 
+    # D'abord on introspect AssetInput pour voir les bons champs
+    introspect_query = '{ __type(name: "AssetInput") { kind inputFields { name type { name kind ofType { name kind } } } } }'
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": introspect_query})
+    print(f"AssetInput schema: {r.text}")
+
     mutation = """
     mutation CreatePost($input: CreatePostInput!) {
       createPost(input: $input) {
@@ -41,6 +46,7 @@ def upload(video_path: str, title: str, description: str):
     }
     """
 
+    # Test avec assets vide d'abord pour valider le reste
     variables = {
         "input": {
             "channelId": channel_id,
@@ -48,7 +54,7 @@ def upload(video_path: str, title: str, description: str):
             "mode": "shareNow",
             "schedulingType": "automatic",
             "needsApproval": False,
-            "assets": [{"url": video_url, "mediaType": "video"}],
+            "assets": [],
         }
     }
 
