@@ -6,18 +6,25 @@ import requests
 import json
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
+ORG_ID = "6adf9041be0f746ddf0f5707"
 
 if __name__ == "__main__":
     api_key = os.environ.get("BUFFER_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    # Introspect Account type pour trouver le champ org
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": '{ __type(name: "Account") { fields { name type { name kind } } } }'})
-    print("Account fields:")
-    fields = r.json().get("data", {}).get("__type", {}).get("fields", [])
-    for f in fields:
-        print(f"  {f['name']}: {f['type']['name'] or f['type']['kind']}")
-
-    # Query account
-    r2 = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": "{ account { id email organizations { id name } } }"})
-    print("\nAccount:", json.dumps(r2.json(), indent=2))
+    # Query channels
+    query = """
+    query {
+      channels(input: { organizationId: "%s" }) {
+        id
+        name
+        service
+        serviceType
+        serviceUsername
+        isConnected
+      }
+    }
+    """ % ORG_ID
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query})
+    print("Channels response:")
+    print(json.dumps(r.json(), indent=2))
