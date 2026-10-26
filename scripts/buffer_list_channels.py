@@ -11,14 +11,22 @@ if __name__ == "__main__":
     api_key = os.environ.get("BUFFER_API_KEY")
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
-    # D'abord introspect ChannelsInput pour connaitre les champs requis
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": '{ __type(name: "ChannelsInput") { inputFields { name type { name kind ofType { name kind } } } } }'})
-    print("ChannelsInput schema:", json.dumps(r.json(), indent=2))
+    # Recuperer l'organizationId via le currentUser
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": "{ currentUser { id currentOrganization { id name } } }"})
+    print("CurrentUser:", json.dumps(r.json(), indent=2))
 
-    # Essai avec input vide
+    data = r.json().get("data", {})
+    org_id = data.get("currentUser", {}).get("currentOrganization", {}).get("id")
+    print(f"\nOrganization ID: {org_id}")
+
+    if not org_id:
+        print("Impossible de trouver l'organizationId")
+        exit(1)
+
+    # Lister les channels
     query = """
-    {
-      channels(input: {}) {
+    query GetChannels($input: ChannelsInput!) {
+      channels(input: $input) {
         id
         name
         service
@@ -26,5 +34,5 @@ if __name__ == "__main__":
       }
     }
     """
-    resp = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query})
+    resp = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query, "variables": {"input": {"organizationId": org_id}}})
     print("\nChannels:", json.dumps(resp.json(), indent=2))
