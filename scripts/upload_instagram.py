@@ -1,5 +1,5 @@
 """
-Publie une video sur Instagram via Buffer GraphQL API.
+Publie une video sur Instagram (Reel) via Buffer GraphQL API.
 """
 import argparse
 import os
@@ -33,6 +33,7 @@ def upload(video_path: str, title: str, description: str):
             "mode": "shareNow",
             "schedulingType": "automatic",
             "needsApproval": False,
+            "instagramPostType": "reel",
             "assets": [{"video": {"url": video_url}}],
         }
     }
