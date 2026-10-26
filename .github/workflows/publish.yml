@@ -26,10 +26,10 @@ jobs:
       - name: Installer les dependances
         timeout-minutes: 5
         run: |
-          pip install google-api-python-client google-auth-oauthlib requests
-          # ffmpeg est souvent deja present ; sinon on l'installe avec une limite de temps (apt-get se bloquait parfois)
-          command -v ffmpeg >/dev/null 2>&1 || timeout 240 sudo apt-get install -y --no-install-recommends -o Acquire::http::Timeout=15 -o Acquire::Retries=5 ffmpeg
-          command -v jq >/dev/null 2>&1 || timeout 120 sudo apt-get install -y jq
+          # ffmpeg via pip (binaire pret a l'emploi) : le miroir apt d'Ubuntu etait trop lent/bloquant
+          pip install google-api-python-client google-auth-oauthlib requests imageio-ffmpeg
+          sudo ln -sf "$(python -c 'import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())')" /usr/local/bin/ffmpeg
+          command -v jq >/dev/null 2>&1 || timeout 120 sudo apt-get install -y --no-install-recommends jq
           ffmpeg -version | head -1
 
       - name: Lire les metadonnees
@@ -68,7 +68,7 @@ jobs:
           VIDEO="${{ steps.meta.outputs.video }}"
           OUTPUT="videos/instagram_reel.mp4"
 
-          HAS_AUDIO=$(ffprobe -v quiet -show_streams -select_streams a "$VIDEO" 2>/dev/null | grep -c 'codec_type=audio' || true)
+          HAS_AUDIO=$(ffmpeg -hide_banner -i "$VIDEO" 2>&1 | grep -c "Audio:" || true)
 
           if [ "$HAS_AUDIO" -gt 0 ]; then
             ffmpeg -i "$VIDEO" \
@@ -95,7 +95,8 @@ jobs:
         run: |
           for f in "${{ steps.meta.outputs.video }}" videos/instagram_reel.mp4; do
             echo "=== $f"
-            ffprobe -v error -show_entries stream=codec_type,codec_name,profile,level,width,height,r_frame_rate,pix_fmt,bit_rate,sample_rate,channels -show_entries format=duration,size,format_name -of default=nw=1 "$f"
+            ffmpeg -hide_banner -i "$f" 2>&1 | grep -E "Duration|Stream" || true
+            ls -l "$f"
           done
         continue-on-error: true
 
