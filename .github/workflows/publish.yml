@@ -144,7 +144,7 @@ jobs:
           TITLE: ${{ steps.meta.outputs.title }}
           DESCRIPTION: ${{ steps.meta.outputs.description }}
         run: |
-          VIDEO_URL="https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/${VIDEO_NAME}"
+          VIDEO_URL="https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/instagram_reel.mp4"   # version 1080x1920 (9:16) exigee par Facebook
           PAYLOAD=$(jq -n --arg u "$VIDEO_URL" --arg t "$TITLE" --arg d "$DESCRIPTION" '{video_url:$u,title:$t,description:$d}')
           echo "Message envoye a Make :"; echo "$PAYLOAD"
           curl -sS -m 60 -w "\nReponse de Make : HTTP %{http_code}\n" -X POST "https://hook.eu1.make.com/tqgfp6mficctfmysxih86imdfegsneag" \
