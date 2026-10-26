@@ -35,9 +35,7 @@ def upload(video_path: str, title: str, description: str):
           }
         }
         ... on MutationError {
-          userErrors {
-            message
-          }
+          message
         }
       }
     }
