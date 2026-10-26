@@ -1,48 +1,57 @@
 """
-Upload Reels vers Instagram via instagrapi + Cloudflare Workers proxy.
-Le proxy contourne le blocage des IPs Azure de GitHub Actions.
+Publie une video sur Instagram via Buffer GraphQL API.
 """
 import argparse
 import os
 import sys
-import json
+import requests
 
-PROXY_URL = "https://instagram-proxy.azizkamaz951.workers.dev"
+BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
+INSTAGRAM_CHANNEL_ID = "6adfb6842f1f5ed648deb265"
 
 def upload(video_path: str, title: str, description: str):
-    try:
-        from instagrapi import Client
-    except ImportError:
-        print("instagrapi non installe.")
+    api_key = os.environ.get("BUFFER_API_KEY")
+    if not api_key:
+        print("BUFFER_API_KEY manquant")
         sys.exit(1)
-
-    session_json = os.environ.get("INSTAGRAM_SESSION_JSON")
-    if not session_json:
-        print("INSTAGRAM_SESSION_JSON manquant")
-        sys.exit(1)
-
-    session_data = json.loads(session_json)
-    cl = Client()
-
-    # Proxy Cloudflare Workers pour contourner le blocage Meta sur IPs Azure
-    cl.set_proxy(PROXY_URL)
-
-    cl.set_settings({
-        "cookies": {
-            "sessionid": session_data.get("sessionid", ""),
-            "csrftoken": session_data.get("csrftoken", ""),
+    video_name = os.path.basename(video_path)
+    video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
+    caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #squat"
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    mutation = """
+    mutation CreatePost($input: CreatePostInput!) {
+      createPost(input: $input) {
+        ... on PostActionSuccess { post { id status } }
+        ... on MutationError { message }
+      }
+    }
+    """
+    variables = {
+        "input": {
+            "channelId": INSTAGRAM_CHANNEL_ID,
+            "text": caption[:2200],
+            "mode": "shareNow",
+            "schedulingType": "automatic",
+            "needsApproval": False,
+            "assets": [{"video": {"url": video_url}}],
         }
-    })
-
-    try:
-        cl.get_timeline_feed()
-    except Exception as e:
-        print(f"Erreur connexion Instagram : {e}")
+    }
+    resp = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": mutation, "variables": variables})
+    print(f"HTTP status: {resp.status_code}")
+    if resp.status_code != 200:
+        print(f"Erreur HTTP: {resp.text}")
         sys.exit(1)
-
-    caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #coach"
-    media = cl.clip_upload(video_path, caption=caption)
-    print(f"Instagram Reel publie : {media.pk}")
+    result = resp.json()
+    if "errors" in result:
+        print(f"Erreur GraphQL: {result['errors']}")
+        sys.exit(1)
+    data = result.get("data", {}).get("createPost", {})
+    post = data.get("post")
+    if post:
+        print(f"Instagram publie via Buffer : id={post.get('id')} status={post.get('status')}")
+    else:
+        print(f"Resultat inattendu: {data}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
