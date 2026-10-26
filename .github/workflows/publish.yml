@@ -84,6 +84,14 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
+      - name: Verifier statut posts Instagram Buffer
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: |
+          sleep 5
+          python scripts/buffer_check_posts.py
+        continue-on-error: true
+
       - name: Notifier Make (Facebook Reels)
         run: |
           VIDEO_NAME="${{ steps.meta.outputs.videoname }}"
