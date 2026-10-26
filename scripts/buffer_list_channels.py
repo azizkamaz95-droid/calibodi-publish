@@ -1,9 +1,8 @@
 """
-Introspect CreatePostInput pour trouver les champs Instagram type.
+Introspect PostInputMetaData pour trouver les champs Instagram type.
 """
 import os
 import requests
-import json
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
 
@@ -18,16 +17,26 @@ if __name__ == "__main__":
         print(f"\n{type_name} fields:")
         for f in fields:
             t = f['type']
-            type_name2 = t.get('name') or t.get('kind', '')
+            type_str = t.get('name') or t.get('kind', '')
             if t.get('ofType'):
                 inner = t['ofType']
-                type_name2 = f"{type_name2}({inner.get('name') or inner.get('kind', '')})"
-            print(f"  {f['name']}: {type_name2}")
+                type_str = f"{type_str}({inner.get('name') or inner.get('kind', '')})"
+            print(f"  {f['name']}: {type_str}")
         return fields
 
-    fields = introspect_type("CreatePostInput")
-    # Look for instagram-related fields
-    for f in fields:
+    # Introspect PostInputMetaData to find Instagram type field
+    meta_fields = introspect_type("PostInputMetaData")
+    for f in meta_fields:
         name = f['name']
-        if 'instagram' in name.lower() or 'type' in name.lower():
-            print(f">>> FOUND: {name}")
+        if 'instagram' in name.lower() or 'type' in name.lower() or 'reel' in name.lower():
+            print(f">>> FOUND in PostInputMetaData: {name}")
+
+    # Also check InstagramPostMetaData if it exists
+    ig_fields = introspect_type("InstagramPostMetaData")
+    for f in ig_fields:
+        print(f">>> InstagramPostMetaData field: {f['name']}")
+
+    # Check InstagramMetaData
+    ig2_fields = introspect_type("InstagramMetaData")
+    for f in ig2_fields:
+        print(f">>> InstagramMetaData field: {f['name']}")
