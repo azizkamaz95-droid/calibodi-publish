@@ -53,10 +53,10 @@ jobs:
           } >> $GITHUB_OUTPUT
           echo "Video: $VIDEO"
 
-      - name: Debug schema Buffer GraphQL
+      - name: Debug channels Buffer
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
-        run: python scripts/buffer_introspect.py
+        run: python scripts/buffer_list_channels.py
         continue-on-error: true
 
       - name: Publier sur YouTube Shorts
