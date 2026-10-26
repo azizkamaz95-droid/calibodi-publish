@@ -12,8 +12,8 @@ if __name__ == "__main__":
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     # Introspect Query root pour voir les champs disponibles
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": "{ __type(name: \"Query\") { fields { name type { name kind } } } }"})
-    data = r.json().get("data", {}).get("__type", {}).get("fields", [])
-    print("Query fields:")
-    for f in data:
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": '{ __type(name: "Query") { fields { name type { name kind } } } }'})
+    fields = r.json().get("data", {}).get("__type", {}).get("fields", [])
+    print("Query fields disponibles:")
+    for f in fields:
         print(f"  {f['name']}: {f['type']['name'] or f['type']['kind']}")
