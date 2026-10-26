@@ -25,6 +25,7 @@ jobs:
       - name: Installer les dependances
         run: |
           pip install google-api-python-client google-auth-oauthlib requests
+          sudo apt-get install -y ffmpeg
 
       - name: Lire les metadonnees
         id: meta
@@ -67,7 +68,6 @@ jobs:
           HAS_AUDIO=$(ffprobe -v quiet -show_streams -select_streams a "$VIDEO" 2>/dev/null | grep -c 'codec_type=audio' || true)
 
           if [ "$HAS_AUDIO" -gt 0 ]; then
-            # Avec audio
             ffmpeg -i "$VIDEO" \
               -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black" \
               -c:v libx264 -crf 23 -preset fast \
@@ -76,7 +76,6 @@ jobs:
               -t 90 \
               "$OUTPUT"
           else
-            # Sans audio — ajouter silence (Instagram exige une piste audio)
             ffmpeg -i "$VIDEO" -f lavfi -i anullsrc=r=44100:cl=stereo \
               -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black" \
               -c:v libx264 -crf 23 -preset fast \
