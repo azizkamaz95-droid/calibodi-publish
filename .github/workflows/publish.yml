@@ -1,4 +1,4 @@
-name: Publier video — TikTok + YouTube + Instagram + Facebook
+name: Publier video — TikTok + YouTube + Facebook via Make
 
 on:
   push:
@@ -23,7 +23,7 @@ jobs:
       - name: Installer les dependances
         run: |
           sudo apt-get install -y xvfb
-          pip install tiktok-uploader instagrapi Pillow google-api-python-client google-auth-oauthlib requests
+          pip install tiktok-uploader google-api-python-client google-auth-oauthlib requests
 
       - name: Lire les metadonnees
         id: meta
@@ -33,7 +33,7 @@ jobs:
             echo "videos/metadata.json introuvable"
             exit 1
           fi
-          VIDEO=$(ls videos/*.mp4 2>/dev/null | head -1)
+          VIDEO=$(ls videos/*.mp4 2>/dev/null | grep -v '1080x1920' | head -1)
           if [ -z "$VIDEO" ]; then
             echo "Aucun fichier .mp4 dans videos/"
             exit 1
@@ -48,37 +48,32 @@ jobs:
             echo "video<<EOF"
             echo "$VIDEO"
             echo "EOF"
+            echo "videoname<<EOF"
+            basename "$VIDEO"
+            echo "EOF"
           } >> $GITHUB_OUTPUT
           echo "Video: $VIDEO"
-          echo "Titre: $(jq -r '.title' $META)"
 
-      - name: Publier sur TikTok
+      - name: Publier sur YouTube Shorts
         env:
-          TIKTOK_SESSION_ID: ${{ secrets.TIKTOK_SESSION_ID }}
+          YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
         run: |
-          xvfb-run --auto-servernum python scripts/upload_tiktok.py \
+          python scripts/upload_youtube.py \
             --video "${{ steps.meta.outputs.video }}" \
             --title "${{ steps.meta.outputs.title }}" \
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      # YouTube desactive pour ce test
-      # - name: Publier sur YouTube Shorts
-
-      # Instagram desactive pour ce test
-      # - name: Publier sur Instagram Reels
-
-      - name: Publier sur Facebook
-        env:
-          FACEBOOK_PAGE_TOKEN: ${{ secrets.FACEBOOK_PAGE_TOKEN }}
-          FACEBOOK_PAGE_ID: ${{ secrets.FACEBOOK_PAGE_ID }}
-          FACEBOOK_APP_ID: ${{ secrets.FACEBOOK_APP_ID }}
-          FACEBOOK_APP_SECRET: ${{ secrets.FACEBOOK_APP_SECRET }}
+      - name: Notifier Make (Facebook Reels)
         run: |
-          python scripts/upload_facebook.py \
-            --video "${{ steps.meta.outputs.video }}" \
-            --title "${{ steps.meta.outputs.title }}" \
-            --description "${{ steps.meta.outputs.description }}"
+          VIDEO_NAME="${{ steps.meta.outputs.videoname }}"
+          TITLE="${{ steps.meta.outputs.title }}"
+          DESCRIPTION="${{ steps.meta.outputs.description }}"
+          VIDEO_URL="https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/${VIDEO_NAME}"
+          curl -s -X POST "https://hook.eu1.make.com/tqgfp6mficctfmysxih86imdfegsneag" \
+            -H "Content-Type: application/json" \
+            -d "{\"video_url\": \"$VIDEO_URL\", \"title\": \"$TITLE\", \"description\": \"$DESCRIPTION\"}"
+          echo "Make notifie"
         continue-on-error: true
 
       - name: Nettoyer apres publication
