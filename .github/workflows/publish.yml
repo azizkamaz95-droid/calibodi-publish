@@ -22,7 +22,7 @@ jobs:
 
       - name: Installer les dépendances
         run: |
-          pip install autotok==2.0.0 instagrapi==2.1.2 google-api-python-client google-auth-oauthlib requests
+          pip install tiktok-uploader instagrapi Pillow google-api-python-client google-auth-oauthlib requests
 
       - name: Lire les métadonnées
         id: meta
