@@ -34,7 +34,7 @@ def upload(video_path: str, title: str, description: str):
             status
           }
         }
-        ... on PostActionError {
+        ... on MutationError {
           userErrors {
             message
           }
@@ -76,7 +76,7 @@ def upload(video_path: str, title: str, description: str):
     if post:
         print(f"TikTok Buffer publie : id={post.get('id')} status={post.get('status')}")
     else:
-        print(f"Resultat inattendu: {data}")
+        print(f"Resultat: {data}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
