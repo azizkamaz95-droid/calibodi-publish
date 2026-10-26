@@ -1,0 +1,48 @@
+name: File d'attente — publication planifiee
+
+# Toutes les 5 minutes (GitHub peut retarder de quelques minutes), cherche une video de queue/ dont
+# publish_at est passe, la deplace dans videos/ et lance la publication (publish.yml).
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: file-attente
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  due:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Chercher une publication due
+        id: due
+        run: python3 scripts/queue_due.py >> "$GITHUB_OUTPUT"
+
+      - name: Deplacer vers videos/ et lancer la publication
+        if: steps.due.outputs.dir != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DIR: ${{ steps.due.outputs.dir }}
+        run: |
+          set -e
+          if ls videos/*.mp4 >/dev/null 2>&1; then
+            echo "videos/ est occupe (publication en cours) : on reessaie au prochain passage"
+            exit 0
+          fi
+          git config user.email "bot@calibodi.com"
+          git config user.name "CaliBodi Bot"
+          git mv "$DIR"/*.mp4 videos/
+          git mv "$DIR/metadata.json" videos/metadata.json
+          git commit -m "Publication planifiee : $DIR"
+          git push origin main
+          gh workflow run publish.yml --ref main
+          echo "Publication lancee pour $DIR"

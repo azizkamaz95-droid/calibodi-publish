@@ -7,6 +7,10 @@ on:
       - 'videos/metadata.json'
   workflow_dispatch:
 
+concurrency:
+  group: file-attente
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
