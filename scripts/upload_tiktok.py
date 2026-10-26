@@ -45,9 +45,10 @@ def upload(video_path: str, title: str, description: str):
         "input": {
             "channelId": channel_id,
             "text": caption[:2200],
-            "mode": "VIDEO",
-            "schedulingType": "PUBLISH_NOW",
-            "videoLink": video_url,
+            "mode": "shareNow",
+            "schedulingType": "automatic",
+            "needsApproval": False,
+            "assets": [{"url": video_url, "mediaType": "video"}],
         }
     }
 
