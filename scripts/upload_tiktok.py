@@ -5,8 +5,17 @@ import argparse
 import os
 import sys
 import requests
+import json
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
+
+def introspect_type(api_key, type_name):
+    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+    query = f'{{ __type(name: "{type_name}") {{ kind inputFields {{ name type {{ name kind ofType {{ name kind }} }} }} }} }}'
+    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": query})
+    print(f"=== {type_name} ===")
+    print(json.dumps(r.json(), indent=2))
+    return r.json().get("data", {}).get("__type", {})
 
 def upload(video_path: str, title: str, description: str):
     api_key = os.environ.get("BUFFER_API_KEY")
@@ -25,10 +34,8 @@ def upload(video_path: str, title: str, description: str):
         "Content-Type": "application/json",
     }
 
-    # D'abord on introspect AssetInput pour voir les bons champs
-    introspect_query = '{ __type(name: "AssetInput") { kind inputFields { name type { name kind ofType { name kind } } } } }'
-    r = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": introspect_query})
-    print(f"AssetInput schema: {r.text}")
+    # Introspect VideoAssetInput
+    introspect_type(api_key, "VideoAssetInput")
 
     mutation = """
     mutation CreatePost($input: CreatePostInput!) {
@@ -46,7 +53,7 @@ def upload(video_path: str, title: str, description: str):
     }
     """
 
-    # Test avec assets vide d'abord pour valider le reste
+    # Essai avec video.url
     variables = {
         "input": {
             "channelId": channel_id,
@@ -54,7 +61,7 @@ def upload(video_path: str, title: str, description: str):
             "mode": "shareNow",
             "schedulingType": "automatic",
             "needsApproval": False,
-            "assets": [],
+            "assets": [{"video": {"url": video_url}}],
         }
     }
 
