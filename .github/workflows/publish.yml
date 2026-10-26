@@ -40,7 +40,9 @@ jobs:
             echo "Aucun fichier .mp4 dans videos/"
             exit 1
           fi
+          NETWORKS=$(jq -r '(.networks // ["youtube","tiktok","instagram","facebook"]) | join(",")' $META)
           {
+            echo "networks=$NETWORKS"
             echo "title<<EOF"
             jq -r '.title' $META
             echo "EOF"
@@ -94,6 +96,7 @@ jobs:
           git push origin main
 
       - name: Publier sur YouTube Shorts
+        if: contains(steps.meta.outputs.networks, 'youtube')
         env:
           YOUTUBE_TOKEN_JSON: ${{ secrets.YOUTUBE_TOKEN_JSON }}
         run: |
@@ -104,6 +107,7 @@ jobs:
         continue-on-error: true
 
       - name: Publier sur TikTok via Buffer
+        if: contains(steps.meta.outputs.networks, 'tiktok')
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
           BUFFER_CHANNEL_ID: ${{ secrets.BUFFER_CHANNEL_ID }}
@@ -115,6 +119,7 @@ jobs:
         continue-on-error: true
 
       - name: Publier sur Instagram via Buffer (instagram_reel.mp4)
+        if: contains(steps.meta.outputs.networks, 'instagram')
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
         run: |
@@ -125,16 +130,22 @@ jobs:
         continue-on-error: true
 
       - name: Notifier Make (Facebook Reels)
+        if: contains(steps.meta.outputs.networks, 'facebook')
+        env:
+          VIDEO_NAME: ${{ steps.meta.outputs.videoname }}
+          TITLE: ${{ steps.meta.outputs.title }}
+          DESCRIPTION: ${{ steps.meta.outputs.description }}
         run: |
-          VIDEO_NAME="${{ steps.meta.outputs.videoname }}"
-          TITLE="${{ steps.meta.outputs.title }}"
-          DESCRIPTION="${{ steps.meta.outputs.description }}"
           VIDEO_URL="https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/${VIDEO_NAME}"
+          PAYLOAD=$(jq -n --arg u "$VIDEO_URL" --arg t "$TITLE" --arg d "$DESCRIPTION" '{video_url:$u,title:$t,description:$d}')
           curl -s -X POST "https://hook.eu1.make.com/tqgfp6mficctfmysxih86imdfegsneag" \
             -H "Content-Type: application/json" \
-            -d "{\"video_url\": \"$VIDEO_URL\", \"title\": \"$TITLE\", \"description\": \"$DESCRIPTION\"}"
+            -d "$PAYLOAD"
           echo "Make notifie"
         continue-on-error: true
+
+      - name: Attendre que Buffer et Make telechargent la video
+        run: sleep 600
 
       - name: Nettoyer apres publication
         run: |
