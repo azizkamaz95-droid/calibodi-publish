@@ -10,6 +10,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -32,7 +34,7 @@ jobs:
             echo "videos/metadata.json introuvable"
             exit 1
           fi
-          VIDEO=$(ls videos/*.mp4 2>/dev/null | grep -v '1080x1920' | head -1)
+          VIDEO=$(ls videos/*.mp4 2>/dev/null | grep -v '_1080x1920' | head -1)
           if [ -z "$VIDEO" ]; then
             echo "Aucun fichier .mp4 dans videos/"
             exit 1
@@ -52,6 +54,52 @@ jobs:
             echo "EOF"
           } >> $GITHUB_OUTPUT
           echo "Video: $VIDEO"
+
+      - name: Convertir video pour Instagram Reels (9:16 vertical)
+        id: convert
+        run: |
+          VIDEO="${{ steps.meta.outputs.video }}"
+          VIDEO_NAME="${{ steps.meta.outputs.videoname }}"
+          BASE="${VIDEO_NAME%.mp4}"
+          OUTPUT="videos/${BASE}_1080x1920.mp4"
+
+          # Verifier si la video a une piste audio
+          HAS_AUDIO=$(ffprobe -v quiet -show_streams -select_streams a "$VIDEO" 2>/dev/null | grep -c 'codec_type=audio' || true)
+
+          if [ "$HAS_AUDIO" -gt 0 ]; then
+            # Avec audio
+            ffmpeg -i "$VIDEO" \
+              -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black" \
+              -c:v libx264 -crf 23 -preset fast \
+              -c:a aac -b:a 128k -ar 44100 \
+              -movflags +faststart \
+              -t 90 \
+              "$OUTPUT"
+          else
+            # Sans audio — ajouter silence (Instagram exige une piste audio)
+            ffmpeg -i "$VIDEO" -f lavfi -i anullsrc=r=44100:cl=stereo \
+              -vf "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black" \
+              -c:v libx264 -crf 23 -preset fast \
+              -c:a aac -b:a 128k \
+              -movflags +faststart \
+              -shortest -t 90 \
+              "$OUTPUT"
+          fi
+
+          echo "instagram_videoname<<EOF" >> $GITHUB_OUTPUT
+          basename "$OUTPUT" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+          echo "Converti: $OUTPUT"
+          ls -lh "$OUTPUT"
+
+      - name: Pousser la video convertie vers GitHub
+        run: |
+          git config user.email "bot@calibodi.com"
+          git config user.name "CaliBodi Bot"
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          git add videos/*_1080x1920.mp4
+          git commit -m "ajout video Instagram 1080x1920" || echo "rien a commiter"
+          git push origin main
 
       - name: Publier sur YouTube Shorts
         env:
@@ -74,22 +122,14 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Publier sur Instagram via Buffer
+      - name: Publier sur Instagram via Buffer (video 9:16 convertie)
         env:
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
         run: |
           python scripts/upload_instagram.py \
-            --video "${{ steps.meta.outputs.video }}" \
+            --video "videos/${{ steps.convert.outputs.instagram_videoname }}" \
             --title "${{ steps.meta.outputs.title }}" \
             --description "${{ steps.meta.outputs.description }}"
-        continue-on-error: true
-
-      - name: Verifier statut posts Instagram Buffer
-        env:
-          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
-        run: |
-          sleep 5
-          python scripts/buffer_check_posts.py
         continue-on-error: true
 
       - name: Notifier Make (Facebook Reels)
@@ -108,6 +148,7 @@ jobs:
         run: |
           git config user.email "bot@calibodi.com"
           git config user.name "CaliBodi Bot"
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
           git rm videos/*.mp4 videos/metadata.json 2>/dev/null || true
           git commit -m "nettoyage automatique apres publication" || true
-          git push || true
+          git push origin main || true
