@@ -1,5 +1,4 @@
-"""Diagnostic Buffer (lecture seule) : champs lies aux miniatures / couvertures dans le schema."""
-import json
+"""Diagnostic Buffer (lecture seule) : valeurs possibles pour programmer un post a une heure precise."""
 import os
 import sys
 import requests
@@ -12,21 +11,15 @@ H = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 
 def gql(q):
-    r = requests.post(GRAPHQL, headers=H, json={"query": q}, timeout=30)
-    return r.json()
+    return requests.post(GRAPHQL, headers=H, json={"query": q}, timeout=30).json()
 
 
-d = gql("query { __schema { types { name kind } } }")
-names = [t["name"] for t in d["data"]["__schema"]["types"] if t["kind"] == "INPUT_OBJECT"]
-focus = [n for n in names if any(k in n.lower() for k in ("asset", "video", "thumb", "cover", "tiktok", "instagram", "facebook", "metadata"))]
-print("types d'entree concernes:", focus)
-for n in focus:
-    t = (gql('query { __type(name: "%s") { inputFields { name type { name kind ofType { name kind ofType { name kind } } } } } }' % n).get("data") or {}).get("__type")
-    if not t:
-        continue
-    print(f"\n== {n}")
-    for f in t["inputFields"] or []:
-        ty = f["type"]; s = ty.get("name") or ty.get("kind"); o = ty.get("ofType")
-        while o:
-            s += f"({o.get('name') or o.get('kind')})"; o = o.get("ofType")
-        print("  ", f["name"], ":", s)
+for n in ("ShareMode", "SchedulingType", "DateTime"):
+    d = gql('query { __type(name: "%s") { kind description enumValues { name description } } }' % n)
+    t = (d.get("data") or {}).get("__type")
+    print(f"\n== {n}:", t and t.get("kind"), (t or {}).get("description"))
+    for e in (t or {}).get("enumValues") or []:
+        print("   valeur:", e["name"], "-", e.get("description"))
+d = gql('query { __type(name: "CreatePostInput") { inputFields { name description } } }')
+for f in ((d.get("data") or {}).get("__type") or {}).get("inputFields") or []:
+    print("  ", f["name"], "-", f.get("description"))
