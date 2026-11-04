@@ -1,4 +1,4 @@
-"""Diagnostic Buffer (lecture seule) : canaux connectes + champs attendus pour un Reel Facebook."""
+"""Diagnostic Buffer (lecture seule) : champs lies aux miniatures / couvertures dans le schema."""
 import json
 import os
 import sys
@@ -11,37 +11,22 @@ if not key:
 H = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
 
 
-def gql(q, v=None):
-    r = requests.post(GRAPHQL, headers=H, json={"query": q, "variables": v or {}}, timeout=30)
-    try:
-        return r.json()
-    except Exception:
-        return {"http": r.status_code, "text": r.text[:300]}
+def gql(q):
+    r = requests.post(GRAPHQL, headers=H, json={"query": q}, timeout=30)
+    return r.json()
 
 
-def show_type(name):
-    d = gql('query { __type(name: "%s") { kind inputFields { name type { name kind ofType { name kind ofType { name kind } } } } enumValues { name } } }' % name)
-    t = (d.get("data") or {}).get("__type")
-    print(f"\n== {name}:", "inconnu" if not t else "")
-    if t:
-        for f in t.get("inputFields") or []:
-            ty = f["type"]; s = ty.get("name") or ty.get("kind")
-            o = ty.get("ofType")
-            while o:
-                s += f"({o.get('name') or o.get('kind')})"; o = o.get("ofType")
-            print("  ", f["name"], ":", s)
-        for e in t.get("enumValues") or []:
-            print("   valeur:", e["name"])
-
-
-orgs = (((gql("query { account { organizations { id } } }").get("data") or {}).get("account") or {}).get("organizations")) or []
-print("organisations:", orgs)
-for o in orgs:
-    for q in ('query($o: OrganizationId!) { channels(input: { organizationId: $o }) { id name service } }',
-              'query($o: OrganizationId!) { channels(input: { organizationId: $o }) { id name service type } }'):
-        d = gql(q, {"o": o["id"]})
-        if d.get("data"):
-            print("canaux:", json.dumps(d["data"], ensure_ascii=False)); break
-        print("tentative sans succes:", json.dumps(d.get("errors") or d, ensure_ascii=False)[:300])
-for n in ("PostTypeFacebook", "FacebookPostMetadataInput", "AnnotationInputFacebook"):
-    show_type(n)
+d = gql("query { __schema { types { name kind } } }")
+names = [t["name"] for t in d["data"]["__schema"]["types"] if t["kind"] == "INPUT_OBJECT"]
+focus = [n for n in names if any(k in n.lower() for k in ("asset", "video", "thumb", "cover", "tiktok", "instagram", "facebook", "metadata"))]
+print("types d'entree concernes:", focus)
+for n in focus:
+    t = (gql('query { __type(name: "%s") { inputFields { name type { name kind ofType { name kind ofType { name kind } } } } } }' % n).get("data") or {}).get("__type")
+    if not t:
+        continue
+    print(f"\n== {n}")
+    for f in t["inputFields"] or []:
+        ty = f["type"]; s = ty.get("name") or ty.get("kind"); o = ty.get("ofType")
+        while o:
+            s += f"({o.get('name') or o.get('kind')})"; o = o.get("ofType")
+        print("  ", f["name"], ":", s)
