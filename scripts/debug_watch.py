@@ -12,7 +12,7 @@ import time
 import requests
 
 GRAPHQL = "https://api.buffer.com/graphql"
-CHANNELS = {"instagram": "6adfb6842f1f5ed648deb265", "tiktok": os.environ.get("BUFFER_CHANNEL_ID", "")}
+CHANNELS = {"instagram": "6adfb6842f1f5ed648deb265", "tiktok": os.environ.get("BUFFER_CHANNEL_ID", ""), "facebook": "6aeb4096e29c69a1715d9234"}
 BASE = "https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/"
 ORGS = "query { account { organizations { id } } }"
 SCHEMA = 'query { __type(name: "PostsInput") { inputFields { name type { name kind ofType { name } } } } }'

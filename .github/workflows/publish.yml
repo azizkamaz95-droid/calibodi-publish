@@ -147,8 +147,19 @@ jobs:
             --description "${{ steps.meta.outputs.description }}"
         continue-on-error: true
 
-      - name: Notifier Make (Facebook Reels)
+      - name: Publier sur Facebook via Buffer (instagram_reel.mp4)
         if: contains(steps.meta.outputs.networks, 'facebook')
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+        run: |
+          python scripts/upload_facebook_buffer.py \
+            --video "videos/instagram_reel.mp4" \
+            --title "${{ steps.meta.outputs.title }}" \
+            --description "${{ steps.meta.outputs.description }}"
+        continue-on-error: true
+
+      - name: Notifier Make (Facebook Reels - secours, reseau facebook_make)
+        if: contains(steps.meta.outputs.networks, 'facebook_make')
         env:
           VIDEO_NAME: ${{ steps.meta.outputs.videoname }}
           TITLE: ${{ steps.meta.outputs.title }}
