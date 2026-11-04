@@ -41,6 +41,7 @@ jobs:
           git config user.email "bot@calibodi.com"
           git config user.name "CaliBodi Bot"
           git mv "$DIR"/*.mp4 videos/
+          if [ -f "$DIR/miniature.jpg" ]; then git mv "$DIR/miniature.jpg" videos/miniature.jpg; fi
           git mv "$DIR/metadata.json" videos/metadata.json
           git commit -m "Publication planifiee : $DIR"
           git push origin main

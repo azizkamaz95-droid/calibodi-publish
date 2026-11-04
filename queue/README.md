@@ -1,6 +1,6 @@
 # File d'attente
 
-Un dossier par video : `queue/2026-10-27-nom/` avec la video `.mp4` et un `metadata.json` :
+Un dossier par video : `queue/2026-10-27-nom/` avec la video `.mp4`, un `metadata.json` et, si on veut, une miniature `miniature.jpg` (1080x1920) envoyee avec la video a Buffer (Instagram, Facebook) :
 
 ```json
 {

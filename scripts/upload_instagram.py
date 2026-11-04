@@ -27,6 +27,11 @@ def upload(video_path: str, title: str, description: str):
       }
     }
     """
+    # miniature facultative : videos/miniature.jpg (deposee avec la video) ; Buffer la transmet au reseau si celui-ci l'accepte
+    video_asset = {"video": {"url": video_url}}
+    if os.path.exists("videos/miniature.jpg"):
+        video_asset["video"]["thumbnailUrl"] = "https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/miniature.jpg"
+        print("Miniature envoyee avec la video")
     variables = {
         "input": {
             "channelId": INSTAGRAM_CHANNEL_ID,
@@ -40,10 +45,20 @@ def upload(video_path: str, title: str, description: str):
                     "shouldShareToFeed": True,
                 }
             },
-            "assets": [{"video": {"url": video_url}}],
+            "assets": [video_asset],
         }
     }
     resp = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": mutation, "variables": variables})
+    if "thumbnailUrl" in video_asset["video"]:
+        try:
+            body = resp.json()
+            ok = resp.status_code == 200 and "errors" not in body and (((body.get("data") or {}).get("createPost")) or {}).get("post")
+        except Exception:
+            ok = False
+        if not ok:
+            print("Echec avec miniature, nouvel essai sans miniature :", resp.text[:300])
+            del video_asset["video"]["thumbnailUrl"]
+            resp = requests.post(BUFFER_GRAPHQL, headers=headers, json={"query": mutation, "variables": variables})
     print(f"HTTP status: {resp.status_code}")
     if resp.status_code != 200:
         print(f"Erreur HTTP: {resp.text}")
