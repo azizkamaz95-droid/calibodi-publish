@@ -43,5 +43,5 @@ for o in orgs:
         if d.get("data"):
             print("canaux:", json.dumps(d["data"], ensure_ascii=False)); break
         print("tentative sans succes:", json.dumps(d.get("errors") or d, ensure_ascii=False)[:300])
-for n in ("CreatePostInput", "PostMetadataInput", "FacebookPostMetadataInput", "FacebookPostType"):
+for n in ("PostTypeFacebook", "FacebookPostMetadataInput", "AnnotationInputFacebook"):
     show_type(n)
