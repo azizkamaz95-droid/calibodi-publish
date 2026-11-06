@@ -5,6 +5,7 @@ import argparse
 import os
 import sys
 import requests
+from captions import tiktok_caption
 
 BUFFER_GRAPHQL = "https://api.buffer.com/graphql"
 
@@ -18,7 +19,8 @@ def upload(video_path: str, title: str, description: str):
 
     video_name = os.path.basename(video_path)
     video_url = f"https://raw.githubusercontent.com/azizkamaz95-droid/calibodi-publish/main/videos/{video_name}"
-    caption = f"{title}\n\n{description}\n\n#CaliBodi #fitness #workout #squat"
+    caption = tiktok_caption(title, description)
+    print("Legende TikTok :\n" + caption)
 
     headers = {
         "Authorization": f"Bearer {api_key}",
