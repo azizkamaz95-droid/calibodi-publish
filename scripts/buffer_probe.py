@@ -80,3 +80,15 @@ csel = [n for n, (tn, kind) in ch_fields.items() if kind in ("SCALAR", "ENUM")]
 cq = 'query($o: OrganizationId!) { channels(input: { organizationId: $o }) { %s } }' % " ".join(csel[:30])
 cres = requests.post(GRAPHQL, headers=H, json={"query": cq, "variables": {"o": org}}, timeout=30).json()
 print(json.dumps(cres, ensure_ascii=False, indent=1)[:5000])
+
+# --- TikTok : statut des derniers posts (lecture seule) ---
+TIKTOK_CHANNEL_ID = "6adf90d62f1f5ed648dc301e"
+print("\n\n===== TIKTOK : derniers posts =====")
+q2 = ("query($o: OrganizationId!, $c: [ChannelId!]) { posts(input: { organizationId: $o, filter: { channelIds: $c } }, first: 4) "
+      "{ edges { node { id status text dueAt sentAt error { message rawError } } } } }")
+r2 = requests.post(GRAPHQL, headers=H, json={"query": q2, "variables": {"o": org, "c": [TIKTOK_CHANNEL_ID]}}, timeout=30).json()
+for e in (((r2.get("data") or {}).get("posts") or {}).get("edges") or []):
+    n = e["node"]
+    print("TIKTOK", n["id"], "statut=%s" % n["status"], "dueAt=%s" % n.get("dueAt"), "sentAt=%s" % n.get("sentAt"), "|", (n.get("text") or "")[:40].replace("\n", " "), "| erreur:", (n.get("error") or {}).get("message"))
+if r2.get("errors"):
+    print("erreurs GraphQL:", r2["errors"])
