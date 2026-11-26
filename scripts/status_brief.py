@@ -20,13 +20,14 @@ def gql(q, v=None):
 
 
 org = gql("query { account { organizations { id } } }")["data"]["account"]["organizations"][0]["id"]
-Q = ("query($o: OrganizationId!, $c: [ChannelId!]) { posts(input: { organizationId: $o, filter: { channelIds: $c } }, first: 2) "
+Q = ("query($o: OrganizationId!, $c: [ChannelId!]) { posts(input: { organizationId: $o, filter: { channelIds: $c } }, first: 12) "
      "{ edges { node { id status text sentAt dueAt error { message } } } } }")
 print("== BUFFER ==")
 for name, cid in CHANNELS.items():
     r = gql(Q, {"o": org, "c": [cid]})
-    for e in (((r.get("data") or {}).get("posts") or {}).get("edges") or []):
-        n = e["node"]
+    nodes = [e["node"] for e in (((r.get("data") or {}).get("posts") or {}).get("edges") or [])]
+    nodes.sort(key=lambda n: (n.get("sentAt") or n.get("dueAt") or ""), reverse=True)
+    for n in nodes[:2]:
         err = (n.get("error") or {}).get("message")
         print("%-9s %-8s %s | %s%s" % (name, n["status"], (n.get("sentAt") or n.get("dueAt") or "")[:16], (n.get("text") or "")[:38].replace("\n", " "), (" | ERREUR: " + err[:80]) if err else ""))
     if r.get("errors"):
