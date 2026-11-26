@@ -1,0 +1,19 @@
+name: Statut des publications (lecture seule, concis)
+on: workflow_dispatch
+permissions:
+  contents: read
+  actions: read
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install --quiet requests
+      - env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/status_brief.py
